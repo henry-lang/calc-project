@@ -301,6 +301,8 @@ function draw() {
       text(`Accumulated Area: ${areaTotal.toFixed(2)}`, 150, height - 30);
       text(`Current Frame: ${areaFrame}`, 150, height - 70);
     }
+
+    text("By Henry, Devin, Ece", width - 100, height  - 10);
   }
 }
 
