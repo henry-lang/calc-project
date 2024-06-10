@@ -1,44 +1,53 @@
 //static stars
-var staticStarsX = [];
-var staticStarsY = [];
+let staticStarsX = [];
+let staticStarsY = [];
 let numStars = 1000;
 
+let law = 1;
+
 // the sun
-var sx;
-var sy;
-var svx;
-var svy;
-var sax;
-var say;
+let sx;
+let sy;
+let svx;
+let svy;
+let sax;
+let say;
 let sclr = "FFFF00";
-var sr = 100;
-var sm = 5000;
+let sr = 100;
+let sm = 5000;
 
 // the planet
-var px;
-var py;
-var pvx;
-var pvy;
-var pax;
-var pay;
+let px;
+let py;
+let pvx;
+let pvy;
+let pax;
+let pay;
 let pclr = "0000FF";
-var pr = 30;
-var pm = 100;
-var planetTrailX = [];
-var planetTrailY = [];
-var planetTrailC = [];
-var trailLength = 5000;
-var resistance = 1; // Use the to add resistance to the orbit
-var day = 0;
+let pr = 30;
+let pm = 100;
+let planetTrailX = [];
+let planetTrailY = [];
+let planetTrailC = [];
+let trailLength = 5000;
+let resistance = 1;
 
-// other variables
-var grav = 1;
-var forceMag;
-var forceAnlge;
-var forceX;
-var forceY;
-var simMode; // 0: setting up, 1: simulating, 2: burning death
-var deathTextSize = 0;
+// other letiables
+let grav = 1;
+let forceMag;
+let forceAnlge;
+let forceX;
+let forceY;
+let simMode; // 0: setting up, 1: simulating
+let deathTextSize = 0;
+
+// law 2
+let areaAccum = false;
+let areaFrame = 0;
+let areaTotal = 0;
+
+// [[[prevX, prevY], [px, py], [sx, sy]], [prevX, prevY], [px, py], [sx, sy]], ...]
+let areaHistory = [];
 
 function setup() {
   createCanvas(1024, 768);
@@ -49,7 +58,7 @@ function setup() {
   // static stars
   staticStars = new Array(numStars)[2];
   stroke(255);
-  for (var i = 0; i < numStars; i++) {
+  for (let i = 0; i < numStars; i++) {
     staticStarsX[i] = int(random(0, width));
     staticStarsY[i] = int(random(0, height));
     point(staticStarsX[i], staticStarsY[i]);
@@ -81,13 +90,13 @@ function setup() {
   svx = -pvx * (pm / sm);
   svy = -pvy * (pm / sm);
 
-  for (var i = 0; i < trailLength; i++) {
+  for (let i = 0; i < trailLength; i++) {
     planetTrailX[i] = px;
     planetTrailY[i] = py;
     planetTrailC[i] = 0;
   }
 
-  // initialize other variables
+  // initialize other letiables
   forceMag = 0;
   forceAngle = 0;
   forceX = 0;
@@ -101,7 +110,7 @@ function draw() {
   // static stars
   background(0);
   stroke(255);
-  for (var i = 0; i < numStars; i++) {
+  for (let i = 0; i < numStars; i++) {
     point(staticStarsX[i], staticStarsY[i]);
   }
 
@@ -113,7 +122,7 @@ function draw() {
     forceX = forceMag * cos(forceAngle);
     forceY = forceMag * sin(forceAngle);
 
-    // setting object variables
+    // setting object letiables
     // accelerations
     if (px > sx) {
       if (py < sy) {
@@ -157,8 +166,30 @@ function draw() {
     px += pvx;
     py += pvy;
 
+    if (areaAccum) {
+      // Calculate the area swept in this frame
+      let prevX = planetTrailX[0];
+      let prevY = planetTrailY[0];
+      let area = abs(
+        (sx * (prevY - py) + prevX * (py - sy) + px * (sy - prevY)) / 2
+      );
+      areaTotal += area;
+
+      // Store history
+      areaHistory.push([
+        [prevX, prevY],
+        [px, py],
+        [sx, sy],
+      ]);
+      areaFrame++;
+
+      if (areaFrame > 30) {
+        areaAccum = false;
+      }
+    }
+
     for (
-      var i = 1;
+      let i = 1;
       i < trailLength;
       i++ // recalculating the trail
     ) {
@@ -169,7 +200,6 @@ function draw() {
     planetTrailX[0] = px;
     planetTrailY[0] = py;
     planetTrailC[0] = sqrt(pvx * pvx + pvy * pvy);
-    day -= 0.1; // used for rotating the earth
   } else if (simMode == 0) {
     stroke(255);
     line(px, py, mouseX, mouseY);
@@ -185,19 +215,8 @@ function draw() {
     // planet
     fill(0, 0, 255);
     ellipse(px, py, pr, pr);
-    fill(0, 255, 0);
-    quad(
-      px + (pr / 3) * cos(day),
-      py + (pr / 3) * sin(day),
-      px - (pr / 3) * sin(day),
-      py + (pr / 3) * cos(day),
-      px - (pr / 2) * cos(day),
-      py - (pr / 2) * sin(day),
-      px + (pr / 2) * sin(day),
-      py - (pr / 2) * cos(day)
-    );
     for (
-      var i = 1;
+      let i = 1;
       i < trailLength;
       i++ // drawing the trail
     ) {
@@ -212,25 +231,115 @@ function draw() {
 
     // labels
     textSize(20);
+
     fill(255);
     text("Earth", px, py + 27);
     fill(0);
     text("Sun", sx, sy + 7);
+
+    // circle
+    fill(0);
+    stroke(255);
+
+    rect(width - 101, 100, 100, 100);
+    fill(255);
+    text("Demo\nCircle", width - 50, 150 - 6);
+
+    text("Orbit Presets", width - 65, 150 - 75);
+
+    // ellipse
+    fill(0);
+    stroke(255);
+    rect(width - 101, 225, 100, 100);
+    fill(255);
+    text("Demo\nEllipse", width - 50, 275 - 6);
+
+    // close
+    fill(0);
+    stroke(255);
+    rect(width - 101, 350, 100, 100);
+    fill(255);
+    text("Demo\nClose", width - 50, 400 - 6);
+
+    fill(0);
+    stroke(255);
+    rect(width - 101, 350, 100, 100);
+    fill(255);
+    text("Demo\nClose", width - 50, 400 - 6);
+
+    fill(0);
+    stroke(255);
+    rect(5, 5, 100, 40);
+    fill(255);
+    text("1st law", 40, 30);
+
+    let offset = 120;
+    fill(0);
+    stroke(255);
+    rect(5 + offset, 5, 100, 40);
+    fill(255);
+    text("2nd law", 45 + offset, 30);
+
+    if (law == 2) {
+      fill(0);
+      stroke(255);
+      rect(5, 50, 225, 40);
+      fill(255);
+      text("Start area acculumation", 120, 80);
+    }
+
+    if (areaTotal > 0) {
+      stroke(0, 255, 0);
+      for (let i = 0; i < areaHistory.length; i++) {
+        let h = areaHistory[i];
+        line(h[0][0], h[0][1], h[1][0], h[1][1]);
+        line(h[1][0], h[1][1], h[2][0], h[2][1]);
+      }
+
+      fill(255);
+      textSize(16);
+      text(`Accumulated Area: ${areaTotal.toFixed(2)}`, 150, height - 30);
+      text(`Current Frame: ${areaFrame}`, 150, height - 70);
+    }
   }
 }
 
 function mousePressed() {
+  if (mouseX > 5 && mouseX < 105 && mouseY > 5 && mouseY < 45) {
+    return;
+  } else if (mouseX > 125 && mouseX < 225 && mouseY > 5 && mouseY < 45) {
+    return;
+  } else if (mouseX > 5 && mouseX < 230 && mouseY > 50 && mouseY < 90) {
+    return;
+  }
+
   px = mouseX;
   py = mouseY;
   simMode = 0;
 }
 
 function mouseReleased() {
+  if (mouseX > 5 && mouseX < 105 && mouseY > 5 && mouseY < 45) {
+    law = 1;
+    return;
+  } else if (mouseX > 125 && mouseX < 225 && mouseY > 5 && mouseY < 45) {
+    law = 2;
+    return;
+  }
+  if (mouseX > 5 && mouseX < 230 && mouseY > 50 && mouseY < 90) {
+    areaAccum = true;
+    areaFrame = 0;
+    areaTotal = 0;
+    areaHistory = [];
+    return;
+  }
+
   pvx = (mouseX - px) / 30;
   pvy = (mouseY - py) / 30;
-  svx = -pvx * (pm / sm); // conservation of momentum
+  svx = -pvx * (pm / sm);
   svy = -pvy * (pm / sm);
   simMode = 1;
+
   if (mouseX > width - 100 && mouseY < 200) {
     // circle
     px = width / 2;
@@ -262,7 +371,8 @@ function mouseReleased() {
     svx = -pvx * (pm / sm);
     svy = -pvy * (pm / sm);
   }
-  for (var i = 0; i < trailLength; i++) {
+
+  for (let i = 0; i < trailLength; i++) {
     planetTrailX[i] = px;
     planetTrailY[i] = py;
   }
